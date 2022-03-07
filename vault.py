@@ -9,6 +9,8 @@ import pyrebase
 import environ
 from pprint import pprint
 
+from rsa import decrypt
+
 # Initialise environment variables
 env = environ.Env()
 environ.Env.read_env()
@@ -35,7 +37,7 @@ db = firebase.database()
 # create the root window
 root = tk.Tk()
 root.title('File Vault')
-root.geometry('300x150')
+root.geometry('300x550')
 
 authenticate_page = ttk.Frame(root)
 authenticate_page.pack()
@@ -174,9 +176,41 @@ def get_key():
         select_file(fernet)
 
 #Dashboard widgets
-open_button = ttk.Button(main, text='Encrypt and store a File', command=lambda: get_key())
-open_button.place(x = 150,y = 50)
-open_button.pack()
+encrypt_button = ttk.Button(main, text='Select file to store', command=lambda: get_key())
+encrypt_button.pack()
 
+view_files_page = ttk.Frame(root)
+
+def return_from_view_files(my_files):
+    for i in range(len(my_files)):
+        my_files[i].pack_forget()
+    view_files_page.pack_forget()
+    main.pack()
+
+def download_file(value):
+    print(value)
+
+def view_stored_files():
+    global my_files
+    my_files = []
+    main.pack_forget()
+    view_files_page.pack()
+    back_button = ttk.Button(view_files_page, text="Back", command=lambda: [back_button.pack_forget(), return_from_view_files(my_files)])
+    back_button.pack()
+    try:
+        files = db.child("vault").child(IsUser).get()
+        print(files.key())
+        for file in files.each():
+            btn = ttk.Button(view_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: download_file(this_file.val()['value']))
+            btn.pack()
+            my_files.append(btn)
+    except:
+        showinfo(
+            title="Error!",
+            message="Something went wrong"
+        )
+
+decrypt_button = ttk.Button(main, text='View stored files', command=lambda: view_stored_files())
+decrypt_button.pack()
 # run the application
 root.mainloop()
