@@ -1,5 +1,3 @@
-from distutils import extension
-from statistics import mode
 from cryptography.fernet import Fernet
 import tkinter as tk
 from tkinter import ttk
@@ -7,9 +5,7 @@ from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 import pyrebase 
 import environ
-from pprint import pprint
-
-from rsa import decrypt
+import hashlib
 
 # Initialise environment variables
 env = environ.Env()
@@ -26,6 +22,7 @@ config = {
 }
 
 firebase = pyrebase.initialize_app(config)
+
 try:
     IsUser=user['userId']
 except:
@@ -37,7 +34,7 @@ db = firebase.database()
 # create the root window
 root = tk.Tk()
 root.title('File Vault')
-root.geometry('300x550')
+root.geometry('600x850')
 
 authenticate_page = ttk.Frame(root)
 authenticate_page.pack()
@@ -163,7 +160,6 @@ def select_file(fernet):
         )
 
 def get_key():
-    print(IsUser)
     try:
         item = db.child("keys").child(IsUser).get()
         fernet = Fernet(item.val()["value"])
@@ -185,12 +181,37 @@ def return_from_view_files(my_files):
     for i in range(len(my_files)):
         my_files[i].pack_forget()
     view_files_page.pack_forget()
+    remove_files_page.pack_forget()
     main.pack()
 
-def download_file(value):
-    print(value)
+def download_file(fernet,value,filename):
+    try:
+        dir_name = fd.askdirectory()
+        decrypted = fernet.decrypt(value.encode())
+        with open((dir_name + "/" + filename),'wb') as save_file:
+            save_file.write(decrypted)
+    except: 
+        showinfo(
+            title='Error!',
+            message='something went wrong'
+        )
+    else: 
+        showinfo(
+            title='Success!',
+            message='file saved successfully'
+        )
+    
 
 def view_stored_files():
+    try:
+        item = db.child("keys").child(IsUser).get()
+        global fernet 
+        fernet = Fernet(item.val()["value"])
+    except: 
+        showinfo(
+            title='Error!',
+            message='something went wrong'
+        )
     global my_files
     my_files = []
     main.pack_forget()
@@ -201,7 +222,7 @@ def view_stored_files():
         files = db.child("vault").child(IsUser).get()
         print(files.key())
         for file in files.each():
-            btn = ttk.Button(view_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: download_file(this_file.val()['value']))
+            btn = ttk.Button(view_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: download_file(fernet, this_file.val()['value'], this_file.key() + '.' + this_file.val()['extension']))
             btn.pack()
             my_files.append(btn)
     except:
@@ -210,7 +231,99 @@ def view_stored_files():
             message="Something went wrong"
         )
 
-decrypt_button = ttk.Button(main, text='View stored files', command=lambda: view_stored_files())
+decrypt_button = ttk.Button(main, text='Download a stored file', command=lambda: view_stored_files())
 decrypt_button.pack()
+
+def remove_file(key,my_files_2):
+    try:
+        db.child("vault").child(IsUser).child(key).remove()
+        for i in range(len(my_files_2)):
+            if(key in my_files_2[i].cget("text") ):
+                my_files_2[i].pack_forget()
+    except: 
+        showinfo(
+            title='Error!',
+            message='something went wrong'
+        )
+    else: 
+        showinfo(
+            title='Success!',
+            message='file successfully removed'
+        )
+
+remove_files_page = ttk.Frame(root)
+
+def remove_stored_file():
+    global my_files_2
+    my_files_2 = []
+    main.pack_forget()
+    remove_files_page.pack()
+    back_button = ttk.Button(remove_files_page, text="Back", command=lambda: [back_button.pack_forget(), return_from_view_files(my_files_2)])
+    back_button.pack()
+    try:
+        files = db.child("vault").child(IsUser).get()
+        print(files.key())
+        for file in files.each():
+            btn = ttk.Button(remove_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: remove_file(this_file.key(),my_files_2))
+            btn.pack()
+            my_files_2.append(btn)
+    except:
+        showinfo(
+            title="Error!",
+            message="Something went wrong"
+        )
+
+remove_button = ttk.Button(main, text='Remove a stored file', command=lambda: remove_stored_file())
+remove_button.pack()
+
+def create_file_hash(data, file_name, extention):
+    print(file_name)
+    m = hashlib.sha256()
+    m.update(data.encode())
+    try:
+        print(m.digest())
+    except Exception as e:
+        showinfo(
+            title="Error!",
+            message=e
+        )
+    try:
+        dir_name = fd.askdirectory()
+        with open((dir_name + "/ " + file_name + '_hash_digest.txt'),'wb') as save_file:
+            save_file.write(m.digest())
+    except Exception as e:
+        showinfo(
+            title="Error!",
+            message=e
+        )
+    else: 
+        showinfo(
+            title='Success!',
+            message='file saved successfully'
+        )
+
+def view_stored_files_to_hash():
+    global my_files
+    my_files = []
+    main.pack_forget()
+    view_files_page.pack()
+    back_button = ttk.Button(view_files_page, text="Back", command=lambda: [back_button.pack_forget(), return_from_view_files(my_files)])
+    back_button.pack()
+    try:
+        files = db.child("vault").child(IsUser).get()
+        print(files.key())
+        for file in files.each():
+            btn = ttk.Button(view_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: create_file_hash(this_file.val()['value'], this_file.key(), this_file.val()['extension']))
+            btn.pack()
+            my_files.append(btn)
+    except:
+        showinfo(
+            title="Error!",
+            message="Something went wrong"
+        )
+
+hash_button = ttk.Button(main, text='Create hash for file', command=lambda: view_stored_files_to_hash())
+hash_button.pack()
+
 # run the application
 root.mainloop()
