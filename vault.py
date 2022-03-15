@@ -1,6 +1,5 @@
 from cryptography.fernet import Fernet
 import tkinter as tk
-from tkinter import ttk
 from tkinter import filedialog as fd
 from tkinter.messagebox import showinfo
 import pyrebase 
@@ -36,10 +35,10 @@ root = tk.Tk()
 root.title('File Vault')
 root.geometry('600x850')
 
-authenticate_page = ttk.Frame(root)
+authenticate_page = tk.Frame(root)
 authenticate_page.pack()
 
-main = ttk.Frame(root)
+main = tk.Frame(root)
 
 def signup(email, password):
     email = email.get()
@@ -80,25 +79,25 @@ def login(email, password):
 #Authentication Widgets
 
 #email label and entry box
-emailLabel = ttk.Label(authenticate_page, text="User Name").grid(row=0, column=0)
+emailLabel = tk.Label(authenticate_page, text="User Name").grid(row=0, column=0)
 email = tk.StringVar()
-emailEntry = ttk.Entry(authenticate_page, textvariable=email).grid(row=0, column=1)  
+emailEntry = tk.Entry(authenticate_page, textvariable=email).grid(row=0, column=1)  
 
 #password label and entry box
-passwordLabel = ttk.Label(authenticate_page,text="Password").grid(row=1, column=0)  
+passwordLabel = tk.Label(authenticate_page,text="Password").grid(row=1, column=0)  
 password = tk.StringVar()
-passwordEntry = ttk.Entry(authenticate_page, textvariable=password, show='*').grid(row=1, column=1) 
+passwordEntry = tk.Entry(authenticate_page, textvariable=password, show='*').grid(row=1, column=1) 
 
 #login and signup button
-loginButton = ttk.Button(authenticate_page, text="Login", command=lambda:login(email, password)).grid(row=4, column=0)  
-SignupButton = ttk.Button(authenticate_page, text="Signup", command=lambda:signup(email, password)).grid(row=4, column=1)  
+loginButton = tk.Button(authenticate_page, text="Login", command=lambda:login(email, password)).grid(row=4, column=0)  
+SignupButton = tk.Button(authenticate_page, text="Signup", command=lambda:signup(email, password)).grid(row=4, column=1)  
 
 #function to logout, hides main and shows authenticate_page page
 def logout():
     main.pack_forget()
     authenticate_page.pack()
 
-logout_button = ttk.Button(main, text="Logout", command=lambda: logout())
+logout_button = tk.Button(main, text="Logout", command=lambda: logout())
 logout_button.pack()
   
 def generate_key():
@@ -108,6 +107,7 @@ def generate_key():
     data = {"value": key.decode("utf-8")}
     try:
         db.child("keys").child(IsUser).set(data)
+        db.child("vault").child(IsUser).remove()
     except:
         showinfo(
             title="Error!",
@@ -119,15 +119,16 @@ def generate_key():
             message='Key successfully created!'
         )
 
-#function to create key, hides main and shows create key page
+#function to create key
 def create_key():
-    # This will recover the widget from toplevel
     generate_key()
   
   
 # See, in command create_key() function is passed to hide Button B1
-create_key_button = ttk.Button(main, text="Create New Key", command=lambda: create_key())
+create_key_warning_1 = tk.Label(main, text="Warning!").pack()
+create_key_button = tk.Button(main, text="Create New Key", command=lambda: create_key())
 create_key_button.pack()
+create_key_warning_2 = tk.Label(main, text="Creating a new will delete all stored files").pack()
 
 def select_file(fernet):
     file = fd.askopenfilename(
@@ -172,10 +173,10 @@ def get_key():
         select_file(fernet)
 
 #Dashboard widgets
-encrypt_button = ttk.Button(main, text='Select file to store', command=lambda: get_key())
+encrypt_button = tk.Button(main, text='Select file to store', command=lambda: get_key())
 encrypt_button.pack()
 
-view_files_page = ttk.Frame(root)
+view_files_page = tk.Frame(root)
 
 def return_from_view_files(my_files):
     for i in range(len(my_files)):
@@ -216,13 +217,13 @@ def view_stored_files():
     my_files = []
     main.pack_forget()
     view_files_page.pack()
-    back_button = ttk.Button(view_files_page, text="Back", command=lambda: [back_button.pack_forget(), return_from_view_files(my_files)])
+    back_button = tk.Button(view_files_page, text="Back", command=lambda: [back_button.pack_forget(), return_from_view_files(my_files)])
     back_button.pack()
     try:
         files = db.child("vault").child(IsUser).get()
         print(files.key())
         for file in files.each():
-            btn = ttk.Button(view_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: download_file(fernet, this_file.val()['value'], this_file.key() + '.' + this_file.val()['extension']))
+            btn = tk.Button(view_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: download_file(fernet, this_file.val()['value'], this_file.key() + '.' + this_file.val()['extension']))
             btn.pack()
             my_files.append(btn)
     except:
@@ -231,7 +232,7 @@ def view_stored_files():
             message="Something went wrong"
         )
 
-decrypt_button = ttk.Button(main, text='Download a stored file', command=lambda: view_stored_files())
+decrypt_button = tk.Button(main, text='Download a stored file', command=lambda: view_stored_files())
 decrypt_button.pack()
 
 def remove_file(key,my_files_2):
@@ -251,20 +252,20 @@ def remove_file(key,my_files_2):
             message='file successfully removed'
         )
 
-remove_files_page = ttk.Frame(root)
+remove_files_page = tk.Frame(root)
 
 def remove_stored_file():
     global my_files_2
     my_files_2 = []
     main.pack_forget()
     remove_files_page.pack()
-    back_button = ttk.Button(remove_files_page, text="Back", command=lambda: [back_button.pack_forget(), return_from_view_files(my_files_2)])
+    back_button = tk.Button(remove_files_page, text="Back", command=lambda: [back_button.pack_forget(), return_from_view_files(my_files_2)])
     back_button.pack()
     try:
         files = db.child("vault").child(IsUser).get()
         print(files.key())
         for file in files.each():
-            btn = ttk.Button(remove_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: remove_file(this_file.key(),my_files_2))
+            btn = tk.Button(remove_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: remove_file(this_file.key(),my_files_2))
             btn.pack()
             my_files_2.append(btn)
     except:
@@ -273,7 +274,7 @@ def remove_stored_file():
             message="Something went wrong"
         )
 
-remove_button = ttk.Button(main, text='Remove a stored file', command=lambda: remove_stored_file())
+remove_button = tk.Button(main, text='Remove a stored file', command=lambda: remove_stored_file())
 remove_button.pack()
 
 def create_file_hash(data, file_name, extention):
@@ -307,13 +308,13 @@ def view_stored_files_to_hash():
     my_files = []
     main.pack_forget()
     view_files_page.pack()
-    back_button = ttk.Button(view_files_page, text="Back", command=lambda: [back_button.pack_forget(), return_from_view_files(my_files)])
+    back_button = tk.Button(view_files_page, text="Back", command=lambda: [back_button.pack_forget(), return_from_view_files(my_files)])
     back_button.pack()
     try:
         files = db.child("vault").child(IsUser).get()
         print(files.key())
         for file in files.each():
-            btn = ttk.Button(view_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: create_file_hash(this_file.val()['value'], this_file.key(), this_file.val()['extension']))
+            btn = tk.Button(view_files_page, text={file.key() + '.' + file.val()['extension']}, command=lambda this_file=file: create_file_hash(this_file.val()['value'], this_file.key(), this_file.val()['extension']))
             btn.pack()
             my_files.append(btn)
     except:
@@ -322,7 +323,7 @@ def view_stored_files_to_hash():
             message="Something went wrong"
         )
 
-hash_button = ttk.Button(main, text='Create hash for file', command=lambda: view_stored_files_to_hash())
+hash_button = tk.Button(main, text='Create hash for file', command=lambda: view_stored_files_to_hash())
 hash_button.pack()
 
 # run the application
